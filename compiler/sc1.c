@@ -74,6 +74,7 @@
 #if defined __LINUX__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __APPLE__
   #include <sclinux.h>
   #include <binreloc.h> /* from BinReloc, see www.autopackage.org */
+  #include <sys/wait.h>
 #endif
 
 #include "svnrev.h"
@@ -552,6 +553,9 @@ int pc_compile(int argc, char *argv[])
       error(104,get_sourcefile(1));
       tmpname=NULL;
       sname=NULL;
+    #elif defined(__LINUX__)
+      tmpname="pawnXXXXX";
+      mkstemps(tmpname, 5);
     #else
       tmpname=tempnam(NULL,"pawn");
     #endif
