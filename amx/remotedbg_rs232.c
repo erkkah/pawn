@@ -34,9 +34,6 @@
 #include "dbgterm.h"
 #include "amx.h"
 
-//#define amx_printf      printf
-//#define amx_fflush()    fflush(stdout)
-
 #if defined __WIN32__
   HANDLE hCom=INVALID_HANDLE_VALUE;
 #elif !defined __MSDOS__

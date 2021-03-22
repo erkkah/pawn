@@ -34,6 +34,7 @@
  *  Command line options:
  *    -rs232=1,baud       set remote debugging over a serial line (port number
  *                        may be 1,2,... for Windows; 0,1,... for Linux)
+ *    -tcp=host:port      set remote debugging over tcp/ip connection
  *    -term=x,y           set terminal size
  *    -term=off,prefix    force terminal emulation off (in environments where
  *                        it is on by default); optionally set a prefix for all
@@ -2144,6 +2145,7 @@ extern AMX_NATIVE_INFO console_Natives[];
       if (strcmp(argv[1],"-?")==0) {
         fprintf(stderr,"Pawn command line debugger\n\nUsage: pawndbg filename [options]\n\n");
         fprintf(stderr,"-rs232[=port][,baud]\tRemote debugging, default baud rate is 57600\n");
+        fprintf(stderr,"-tcp=host:port\tRemote debugging\n");
         fprintf(stderr,"-transfer\t\tTransfer compiled script to remote host before starting\n");
         fprintf(stderr,"-quit\t\t\tEnd the debugging sessions (e.g. after transfer)\n");
         fprintf(stderr,"-term=off\t\tNo terminal support, use basic console output only\n");
@@ -2205,6 +2207,29 @@ extern AMX_NATIVE_INFO console_Natives[];
         #endif
         amx_printf("Host connected\n");
         amx_fflush();
+      #else
+        amx_printf("Remote debugging is not supported\n");
+        amx_fflush();
+        return 1;
+      #endif
+    } else if (strncmp(argv[i], "-tcp", 4) == 0) {
+      #if !defined NO_REMOTE
+        #define ADDRSIZE 3+1+3+1+3+1+3+1+5
+        char addr[ADDRSIZE + 1];
+        if (strlen(argv[i]) > ADDRSIZE) {
+          amx_printf("Invalid address\n");
+          return 1;
+        }
+        int tcpPort = 0;
+        if ((ptr = strchr(argv[i], '=')) != NULL) {
+          sscanf(ptr + 1, "%[^:]:%d", addr, &tcpPort);
+        } else {
+          amx_printf("Expected host:port argument to -tcp\n");
+          return 1;
+        }
+        if (!remote_tcp(addr, tcpPort)) {
+          return 1;
+        }
       #else
         amx_printf("Remote debugging is not supported\n");
         amx_fflush();

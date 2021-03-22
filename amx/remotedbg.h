@@ -123,7 +123,8 @@
 
 #include "amx.h"
 
-int remote_rs232(const char *port,int baud);
+int remote_rs232(const char *port, int baud);
+int remote_tcp(const char *host, int port);
 
 void remote_close();
 void remote_read(AMX *amx,cell vaddr,int number);
@@ -133,7 +134,6 @@ void remote_sync(AMX *amx);
 int remote_wait(AMX *amx, long retries);
 int remote_transfer(const char *filename);
 
-
 cell *VirtAddressToPhys(AMX *amx,cell amx_addr);
 const char *skippath(const char *str);
 
@@ -142,6 +142,7 @@ extern int remote;
 enum {
   REMOTE_NONE,  /* this means "not remote" */
   REMOTE_RS232,
+  REMOTE_TCP,
   REMOTE_USB,   /* ??? not implemented */
   /* --- */
   REMOTE_TYPES
