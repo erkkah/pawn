@@ -63,31 +63,13 @@
 #include "amxdbg.h"
 #include "amxpool.h"
 #include "remotedbg.h"
-
-#if defined __WIN32__ || defined __MSDOS__ || defined __WATCOMC__
-  #include <conio.h>
-  #if defined __WIN32__ || defined __WATCOMC__
-    #if !defined __WIN32__
-      #define __WIN32__ 1
-    #endif
-    #include <windows.h>
-    #if !defined amx_Init && !defined NO_WIN32_CONSOLE && !defined AMX_TERMINAL
-      #define WIN32_CONSOLE
-    #endif
-  #endif
-#elif !defined macintosh
-  #include "../linux/getch.h"
-  #include <fcntl.h>
-  #include <termios.h>
-  #include <unistd.h>
-#endif
+#include "dbgterm.h"
 
 #if !defined AMX_NODYNALOAD && defined ENABLE_BINRELOC && (defined __LINUX__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __APPLE__)
   #include <binreloc.h> /* from BinReloc, see www.autopackage.org */
 #endif
 
 extern int chdir(const char *path); /* position of this function in header files depends on the compiler */
-
 
 #define MAXSTACKTRACE   128
 #define MAXLINELENGTH   128
@@ -101,159 +83,6 @@ extern int chdir(const char *path); /* position of this function in header files
 #endif
 #define WATCHLINES      4       /* default number of watches displayed */
 #define LISTLINES       (STD_LINES - WATCHLINES - 10) /* default code lines */
-
-#if (defined AMX_TERMINAL || defined amx_Init) && !defined DBG_DUALTERM
-  /* required functions are implemented elsewhere */
-  int amx_printf(char *,...);
-  int amx_putchar(int);
-  int amx_fflush(void);
-  int amx_getch(void);
-  char *amx_gets(char *,int);
-  int amx_termctl(int,int);
-  void amx_clrscr(void);
-  void amx_clreol(void);
-  void amx_gotoxy(int x,int y);
-  void amx_wherexy(int *x,int *y);
-  unsigned int amx_setattr(int foregr,int backgr,int highlight);
-  void amx_console(int columns, int lines, int flags);
-  void amx_viewsize(int *width,int *height);
-  #if defined amx_Init
-    #define STR_PROMPT  "dbg\xbb "
-    #define CHR_HLINE   '\x97'
-  #else
-    #define STR_PROMPT  "dbg> "
-    #define CHR_HLINE   '-'
-  #endif
-  #define CHR_VLINE     '|'
-#elif defined USE_CURSES || defined HAVE_CURSES_H
-  /* Use the "curses" library to implement the console */
-  #include <curses.h>
-  const int _False = 0;     /* to avoid compiler warnings */
-  #define amx_printf        printw
-  #define amx_putchar(c)    addch(c)
-  #define amx_fflush()      (0)
-  #define amx_getch()       getch()
-  #define amx_gets(s,n)     getnstr(s,n)
-  #define amx_clrscr()      (void)(0)
-  #define amx_clreol()      (void)(0)
-  #define amx_gotoxy(x,y)   (void)(0)
-  #define amx_wherexy(x,y)  (*(x)=*(y)=0)
-  #define amx_setattr(c,b,h) (_False)
-  #define amx_termctl(c,v)  (_False)
-  #define amx_console(c,l,f) (void)(0)
-  #define STR_PROMPT        "dbg> "
-  #define CHR_HLINE         '-'
-  #define CHR_VLINE         '|'
-#elif defined VT100 || defined __LINUX__ || defined ANSITERM
-  /* ANSI/VT100 terminal, or shell emulating "xterm" */
-  #if !defined VT100 && !defined ANSITERM && defined __LINUX__
-    #define VT100
-  #endif
-  #define amx_printf      printf
-  #define amx_putchar(c)  putchar(c)
-  #define amx_fflush()    fflush(stdout)
-  #define amx_getch()     getch()
-  #define amx_gets(s,n)   fgets(s,n,stdin)
-  int amx_termctl(int,int);
-  void amx_clrscr(void);
-  void amx_clreol(void);
-  void amx_gotoxy(int x,int y);
-  void amx_wherexy(int *x,int *y);
-  unsigned int amx_setattr(int foregr,int backgr,int highlight);
-  void amx_console(int columns, int lines, int flags);
-  void amx_viewsize(int *width,int *height);
-  #define STR_PROMPT    "dbg> "
-  #define CHR_HLINE     '-'
-  #define CHR_VLINE     '|'
-#elif defined WIN32_CONSOLE
-  /* Win32 console */
-  #define amx_printf      printf
-  #define amx_putchar(c)  putchar(c)
-  #define amx_fflush()    fflush(stdout)
-  int amx_termctl(int,int);
-  void amx_clrscr(void);
-  void amx_clreol(void);
-  void amx_gotoxy(int x,int y);
-  void amx_wherexy(int *x,int *y);
-  unsigned int amx_setattr(int foregr,int backgr,int highlight);
-  void amx_console(int columns, int lines, int flags);
-  void amx_viewsize(int *width,int *height);
-  static int localecho=1;
-  static int amx_getch(void)  /* this implementation works with redirected input */
-  {
-    char ch;
-    DWORD count,mode;
-    HANDLE hConsole=GetStdHandle(STD_INPUT_HANDLE);
-    GetConsoleMode(hConsole,&mode);
-    SetConsoleMode(hConsole,mode & ~(ENABLE_LINE_INPUT|ENABLE_ECHO_INPUT));
-    while (ReadFile(hConsole,&ch,1,&count,NULL) && count==0)
-      /* nothing */;
-    SetConsoleMode(hConsole,mode);
-    if (count>0)
-      return ch;
-    return EOF;
-  }
-  static void amx_gets(char *s,int n) /* this implementation works with redirected input */
-  {
-    if (n>0) {
-      int c,chars=0;
-      c=amx_getch();
-      while (c!=EOF && c!='\r' && chars<n-1) {
-        if (c=='\b') {
-          if (chars>0) {
-            chars--;
-            if (localecho) {
-              amx_putchar((char)c);
-              amx_putchar(' ');
-            }
-          }
-        } else {
-          s[chars++]=(char)c;
-        }
-        if (localecho) {
-          amx_putchar((char)c);
-          amx_fflush();
-        }
-        if (chars<n-1)
-          c=amx_getch();
-      } /* while */
-      if (c=='\r' && localecho) {
-        amx_putchar('\n');
-        amx_fflush();
-      } /* if */
-      assert(chars<n);
-      s[chars]='\0';
-    }
-  }
-  #define STR_PROMPT    "dbg> "
-  #define CHR_HLINE     '\xc4'
-  #define CHR_VLINE     '\xb3'
-#else
-  /* assume a streaming terminal; limited features (no colour, no cursor
-   * control)
-   */
-  #define amx_printf        printf
-  #define amx_putchar(c)    putchar(c)
-  #define amx_fflush()      fflush(stdout)
-  #define amx_getch()       getch()
-  #define amx_gets(s,n)     fgets(s,n,stdin)
-  #define amx_clrscr()      (void)(0)
-  #define amx_clreol()      (void)(0)
-  #define amx_gotoxy(x,y)   ((void)(x),(void)(y),(void)(0))
-  #define amx_wherexy(x,y)  (*(x)=*(y)=0)
-  #define amx_setattr(c,b,h) ((void)(c),(void)(b),(void)(h),(0))
-  #define amx_termctl(c,v)  ((void)(c),(void)(v),(0))
-  #define amx_console(c,l,f) ((void)(c),(void)(l),(void)(f),(void)(0))
-  #define amx_viewsize      (*(x)=80,*(y)=25)
-  #define STR_PROMPT        "dbg> "
-  #define CHR_HLINE         '-'
-  #define CHR_VLINE         '|'
-#endif
-#define CHR_CURLINE         '*'
-#if defined VT100
-  #define CHR_HLINE_VT100   'q' // in alternate font
-  #define CHR_VLINE_VT100   'x'
-#endif
 
 enum {
   BP_NONE,
@@ -809,8 +638,7 @@ static int get_symbolvalue(AMX *amx,AMX_DBG_SYMBOL *sym,int index,cell *value)
     base=*vptr;
   } /* if */
   #if !defined NO_REMOTE
-    if (remote==REMOTE_RS232)
-      remote_read_rs232(amx,(cell)(base+index*sizeof(cell)),1);
+    remote_read(amx,(cell)(base+index*sizeof(cell)),1);
   #endif
   vptr=VirtAddressToPhys(amx,(cell)(base+index*sizeof(cell)));
   if (vptr!=NULL)
@@ -833,8 +661,7 @@ static int set_symbolvalue(AMX *amx,const AMX_DBG_SYMBOL *sym,int index,cell val
   assert(vptr!=NULL);
   *vptr=value;
   #if !defined NO_REMOTE
-    if (remote==REMOTE_RS232)
-      remote_write_rs232(amx,(cell)(base+index*sizeof(cell)),1);
+    remote_write(amx,(cell)(base+index*sizeof(cell)),1);
   #endif
   return 1;
 }
@@ -862,8 +689,7 @@ static char string[MAXLINELENGTH];
     base=*addr;
   } /* if */
   #if !defined NO_REMOTE
-    if (remote==REMOTE_RS232)
-      remote_read_rs232(amx,base,MAXLINELENGTH);
+    remote_read(amx,base,MAXLINELENGTH);
   #endif
   addr=VirtAddressToPhys(amx,base);
   assert(addr!=NULL);
@@ -1698,8 +1524,7 @@ static char lastcommand[32] = "";
         term_close();
       } /* if */
       #if !defined NO_REMOTE
-        if (remote==REMOTE_RS232)
-          remote_rs232(NULL,0);
+        remote_close();
       #endif
       exit(0);
     } else if (stricmp(command,"g")==0 || stricmp(command,"go")==0) {
@@ -1743,8 +1568,7 @@ static char lastcommand[32] = "";
           amx_printf("%s",strlen(amxdbg->automatontbl[i]->name)==0 ? "(anonymous)" : amxdbg->automatontbl[i]->name);
           /* read the variable at the address */
           #if !defined NO_REMOTE
-            if (remote==REMOTE_RS232)
-              remote_read_rs232(amx,amxdbg->automatontbl[i]->address,1);
+            remote_read(amx,amxdbg->automatontbl[i]->address,1);
           #endif
           cptr=VirtAddressToPhys(amx,amxdbg->automatontbl[i]->address);
           assert(cptr!=NULL);
@@ -1930,15 +1754,11 @@ static char lastcommand[32] = "";
       #if defined NO_REMOTE
         amx_printf("\tRemote file transfer is not supported.\n");
       #else
-        if (remote!=REMOTE_RS232) {
-          amx_printf("\tRemote file transfer is not supported.\n");
+        if (remote_transfer(amx_filename)) {
+          /* restart the debugger */
+          longjmp(restart_buf,1);
         } else {
-          if (remote_transfer_rs232(amx_filename)) {
-            /* restart the debugger */
-            longjmp(restart_buf,1);
-          } else {
-            amx_printf("\tRemote file transfer failed.\n");
-          } /* if */
+          amx_printf("\tRemote file transfer failed.\n");
         } /* if */
       #endif
     } else if (stricmp(command,"type")==0) {
@@ -2120,8 +1940,7 @@ static int breakcount;  /* breaks since last stop on the same line */
 
   /* get more information from the remote target */
   #if !defined NO_REMOTE
-    if (remote!=REMOTE_NONE)
-      remote_sync_rs232(amx);
+    remote_sync(amx);
   #endif
 
   /* get the debug information header */
@@ -2393,7 +2212,7 @@ extern AMX_NATIVE_INFO console_Natives[];
       #endif
     } else if (strcmp(argv[i],"-transfer")==0) {
       #if !defined NO_REMOTE
-        if (!remote_transfer_rs232(amx_filename)) {
+        if (!remote_transfer(amx_filename)) {
           amx_printf("\tRemote file transfer failed.\n");
           return 1;
         } /* if */
@@ -2467,13 +2286,13 @@ extern AMX_NATIVE_INFO console_Natives[];
           /* wait for input from the host, but use a time-out on the very first
              call (if the remote host waits for a GO command, we need to issue
              one; on every next call, there is no timeout) */
-          while (!remote_wait_rs232(&amx,retries))
-            remote_resume_rs232();
+          while (!remote_wait(&amx,retries))
+            remote_resume();
           retries=-1;
           /* call the debug procedure ourselves */
           amx_InternalDebugProc(&amx);
           /* reply, to say that the script may continue to run */
-          remote_resume_rs232();
+          remote_resume();
         } /* for */
       #endif
     } /* if */
@@ -2483,8 +2302,7 @@ extern AMX_NATIVE_INFO console_Natives[];
   if (terminal>0)
     amx_clrscr();
   #if !defined NO_REMOTE
-    if (remote==REMOTE_RS232)
-      remote_rs232(NULL,0);
+    remote_close();
   #endif
   if (err != AMX_ERR_NONE)
     amx_printf("\nRun time error %d\n", err);

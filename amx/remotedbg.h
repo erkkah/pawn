@@ -124,12 +124,15 @@
 #include "amx.h"
 
 int remote_rs232(const char *port,int baud);
-void remote_read_rs232(AMX *amx,cell vaddr,int number);
-void remote_write_rs232(AMX *amx,cell vaddr,int number);
-void remote_resume_rs232(void);
-void remote_sync_rs232(AMX *amx);
-int remote_wait_rs232(AMX *amx, long retries);
-int remote_transfer_rs232(const char *filename);
+
+void remote_close();
+void remote_read(AMX *amx,cell vaddr,int number);
+void remote_write(AMX *amx,cell vaddr,int number);
+void remote_resume(void);
+void remote_sync(AMX *amx);
+int remote_wait(AMX *amx, long retries);
+int remote_transfer(const char *filename);
+
 
 cell *VirtAddressToPhys(AMX *amx,cell amx_addr);
 const char *skippath(const char *str);

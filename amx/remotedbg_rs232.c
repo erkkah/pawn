@@ -31,10 +31,11 @@
 #include <unistd.h>
 #endif
 
+#include "dbgterm.h"
 #include "amx.h"
 
-#define amx_printf      printf
-#define amx_fflush()    fflush(stdout)
+//#define amx_printf      printf
+//#define amx_fflush()    fflush(stdout)
 
 #if defined __WIN32__
   HANDLE hCom=INVALID_HANDLE_VALUE;
@@ -44,8 +45,6 @@
 #endif
 static char remote_pendingbuf[30];
 static int remote_pendingsize=0;
-
-int remote=REMOTE_NONE;
 
 static int send_rs232(const char *buffer, int len)
 {
