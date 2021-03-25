@@ -127,10 +127,10 @@ int remote_rs232(const char *port, int baud);
 int remote_tcp(const char *host, int port);
 
 void remote_close();
-void remote_read(AMX *amx,cell vaddr,int number);
-void remote_write(AMX *amx,cell vaddr,int number);
-void remote_resume(void);
-void remote_sync(AMX *amx);
+int remote_read(AMX *amx,cell vaddr,int number);
+int remote_write(AMX *amx,cell vaddr,int number);
+int remote_resume(void);
+int remote_sync(AMX *amx);
 int remote_wait(AMX *amx, long retries);
 int remote_transfer(const char *filename);
 

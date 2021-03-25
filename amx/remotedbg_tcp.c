@@ -60,7 +60,10 @@ static int getresponse_tcp(char *buffer, int buffersize, long retries)
     /* read character by character, so that when we see the ']' we stop
      * reading and keep the rest of the waiting characters in the queue
      */
-    size=read(sock,buffer+len,1);
+    size = read(sock,buffer+len,1);
+    if (size <= 0) {
+      return 0;
+    }
     len+=size;
 
     /* throw away dummy input characters */
@@ -168,7 +171,7 @@ int remote_tcp(const char *host, int port)
   }
 
   sock = socket(AF_INET, SOCK_STREAM, 0);
-  if (sock == -1) {
+  if (sock < 0) {
     return 0;
   }
 
@@ -220,7 +223,7 @@ int remote_tcp(const char *host, int port)
   return 1;
 }
 
-int remote_wait_tcp(AMX *amx, long retries)
+int remote_wait_tcp(AMX *amx, long _)
 {
   char buffer[50],*ptr;
   unsigned long size;
@@ -240,21 +243,18 @@ int remote_wait_tcp(AMX *amx, long retries)
         state=SCAN;
       } /* if */
       /* read a buffer, see if we can find the start condition */
-      do {
-        if (remote_pendingsize>0) {
-          assert(remote_pendingsize<sizeof buffer);
-          size=remote_pendingsize;
-          memcpy(buffer,remote_pendingbuf,remote_pendingsize);
-          remote_pendingsize=0;
-        } else {
-          size=read(sock,buffer+offs,sizeof buffer - offs - 1);
-        } /* if */
-        if (size==0 && remote_pendingsize==0 && retries>0) {
-          usleep(50*1000);
-          retries--;
-        }
-      } while (size==0 && remote_pendingsize==0 && retries!=0);
-      if (size==0 && remote_pendingsize==0)
+      if (remote_pendingsize>0) {
+        assert(remote_pendingsize<sizeof buffer);
+        size=remote_pendingsize;
+        memcpy(buffer,remote_pendingbuf,remote_pendingsize);
+        remote_pendingsize=0;
+      } else {
+        size=read(sock,buffer+offs,sizeof buffer - offs - 1);
+      } /* if */
+      if (size <= 0) {
+        return 0;
+      }
+      if (size == 0 && remote_pendingsize == 0)
         return 0;
       assert(size+offs<sizeof buffer);
       buffer[size+offs]='\0';   /* force zero-termination */
@@ -293,43 +293,53 @@ int remote_wait_tcp(AMX *amx, long retries)
   } /* for */
 }
 
-void remote_resume_tcp(void)
+int remote_resume_tcp(void)
 {
-  write(sock,"!",1);
+  return write(sock,"!",1) < 0;
 }
 
-void remote_sync_tcp(AMX *amx)
+int remote_sync_tcp(AMX *amx)
 {
   char buffer[128];
   long frm,stk,hea;
 
   for ( ;; ) {
-    write(sock,"?R\n",3);
+    if (write(sock,"?R\n",3) <= 0) {
+      return 0;
+    }
 
-    if (getresponse_tcp(buffer,sizeof buffer,10)
-        && sscanf(buffer+1,"%lx,%lx,%lx",&frm,&stk,&hea)==3)
+    int status = getresponse_tcp(buffer,sizeof buffer,10);
+    if (status > 0 && sscanf(buffer+1,"%lx,%lx,%lx",&frm,&stk,&hea)==3)
     {
       amx->frm=(cell)frm;
       amx->stk=(cell)stk;
       amx->hea=(cell)hea;
-      return;
+      return 1;
     } /* if */
+    if (status <= 0) {
+      return 0;
+    }
   } /* for */
 }
 
-void remote_read_tcp(AMX *amx,cell vaddr,int number)
+int remote_read_tcp(AMX *amx,cell vaddr,int number)
 {
   char buffer[128];
   char *ptr;
   int len;
+  int status;
   cell val;
   cell *cptr;
 
   while (number>0) {
     sprintf(buffer,"?M%lx,%x\n",(long)vaddr,(number>10) ? 10 : number);
     len=(int)strlen(buffer);
-    send_tcp(buffer,len);
-    if (getresponse_tcp(buffer,sizeof buffer,100)) {
+    status = send_tcp(buffer,len);
+    if (status <= 0) {
+      return 0;
+    }
+    status = getresponse_tcp(buffer,sizeof buffer,100);
+    if (status > 0) {
       ptr=buffer+1;     /* skip '�' */
       while (number>0 && (ptr-buffer)<sizeof buffer && *ptr!=']') {
         val=strtol(ptr,&ptr,16);
@@ -341,13 +351,17 @@ void remote_read_tcp(AMX *amx,cell vaddr,int number)
           ptr++;        /* skip optional comma (and whitespace) */
       } /* while */
     } /* if */
+    if (status <= 0) {
+      return 0;
+    }
   } /* while */
 }
 
-void remote_write_tcp(AMX *amx,cell vaddr,int number)
+int remote_write_tcp(AMX *amx,cell vaddr,int number)
 {
   char buffer[128];
   int len,num;
+  int status;
   cell *cptr;
 
   while (number>0) {
@@ -364,9 +378,17 @@ void remote_write_tcp(AMX *amx,cell vaddr,int number)
     } /* while */
     strcat(buffer,"\n");
     len=(int)strlen(buffer);
-    send_tcp(buffer,len);
-    if (getresponse_tcp(buffer,sizeof buffer,100) && strtol(buffer+1,NULL,16)==0)
-      return;
+    if (send_tcp(buffer,len) <= 0) {
+      return 0;
+    }
+    
+    status = getresponse_tcp(buffer,sizeof buffer,100);
+    if (status > 0 && strtol(buffer+1,NULL,16) == 0) {
+      return 1;
+    }
+    if (status <= 0) {
+      return 0;
+    }
   } /* while */
 }
 
@@ -394,9 +416,18 @@ int remote_transfer_tcp(const char *filename)
   /* set up */
   sprintf(str,"?P %lx,%s\n",size,skippath(filename));
   len=(int)strlen(str);
-  send_tcp(str,len);
-  if (!getresponse_tcp(str,sizeof str,100) || sscanf(str+1,"%lx",&block)!=1)
+
+  int status = send_tcp(str,len);
+  if (status <= 0) {
+    return 0;
+  }
+  status = getresponse_tcp(str,sizeof str,100);
+  if (status == 0 || sscanf(str+1,"%lx",&block) != 1) {
     block=0;
+  }
+  if (status <= 0) {
+    return 0;
+  }
   /* allocate 1 byte more, for the ACK/NAK prefix */
   if (block==0 || (buffer=(unsigned char*)malloc((block+1)*sizeof(char)))==NULL) {
     fclose(fp);
@@ -416,8 +447,14 @@ int remote_transfer_tcp(const char *filename)
       chksum=(chksum&0xff)+(chksum>>8);
     do {
       /* send block */
-      send_tcp((const char*)buffer,(int)bytes+1); /* also send the ACK/NAK prefix */
-      getresponse_tcp(str,sizeof str,100);
+      int status = send_tcp((const char*)buffer,(int)bytes+1); /* also send the ACK/NAK prefix */
+      if (status <= 0) {
+        return 0;
+      }
+      status = getresponse_tcp(str,sizeof str,100);
+      if (status <= 0) {
+        return 0;
+      }
       err=(str[0]!='\0') ? strtol(str+1,NULL,16) : 0;
       assert(err>=0 && err<=255);
       if (err==0) {
