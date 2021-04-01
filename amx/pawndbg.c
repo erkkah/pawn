@@ -2214,7 +2214,7 @@ extern AMX_NATIVE_INFO console_Natives[];
       #endif
     } else if (strncmp(argv[i], "-tcp", 4) == 0) {
       #if !defined NO_REMOTE
-        #define ADDRSIZE 3+1+3+1+3+1+3+1+5
+        #define ADDRSIZE 4*3+3+1+5
         char addr[ADDRSIZE + 1];
         if (strlen(argv[i]) > ADDRSIZE) {
           amx_printf("Invalid address\n");
@@ -2311,13 +2311,16 @@ extern AMX_NATIVE_INFO console_Natives[];
           /* wait for input from the host, but use a time-out on the very first
              call (if the remote host waits for a GO command, we need to issue
              one; on every next call, there is no timeout) */
-          while (!remote_wait(&amx,retries))
+          while (!remote_wait(&amx,retries)) {
             remote_resume();
+          }
           retries=-1;
           /* call the debug procedure ourselves */
           amx_InternalDebugProc(&amx);
           /* reply, to say that the script may continue to run */
-          remote_resume();
+          if (!remote_resume()) {
+            break;
+          }
         } /* for */
       #endif
     } /* if */
