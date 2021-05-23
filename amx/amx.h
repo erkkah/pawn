@@ -459,7 +459,7 @@ enum {
 
 uint16_t * AMXAPI amx_Align16(uint16_t *v);
 uint32_t * AMXAPI amx_Align32(uint32_t *v);
-#if defined _I64_MAX || defined INT64_MAX || defined HAVE_I64
+#if defined _I64_MAX || defined INT64_MAX || defined HAVE_I64 || defined __ARM_ARCH_ISA_A64
   uint64_t * AMXAPI amx_Align64(uint64_t *v);
 #endif
 int AMXAPI amx_Allot(AMX *amx, int cells, cell **address);
@@ -510,7 +510,7 @@ int AMXAPI amx_UTF8Put(char *string, char **endptr, int maxchars, cell value);
 #if PAWN_CELL_SIZE==32
   void amx_Swap32(uint32_t *v);
 #endif
-#if PAWN_CELL_SIZE==64 && (defined _I64_MAX || defined INT64_MAX || defined HAVE_I64)
+#if PAWN_CELL_SIZE==64 && (defined _I64_MAX || defined INT64_MAX || defined HAVE_I64 || defined __ARM_ARCH_ISA_A64)
   void amx_Swap64(uint64_t *v);
 #endif
 
@@ -520,7 +520,7 @@ int AMXAPI amx_UTF8Put(char *string, char **endptr, int maxchars, cell value);
 #elif PAWN_CELL_SIZE==32
   #define amx_AlignCell(v) amx_Align32((uint32_t*)(v))
   #define amx_SwapCell(v)  amx_Swap32((uint32_t*)(v))
-#elif PAWN_CELL_SIZE==64 && (defined _I64_MAX || defined INT64_MAX || defined HAVE_I64)
+#elif PAWN_CELL_SIZE==64 && (defined _I64_MAX || defined INT64_MAX || defined HAVE_I64 || defined __ARM_ARCH_ISA_A64)
   #define amx_AlignCell(v) amx_Align64((uint64_t*)(v))
   #define amx_SwapCell(v)  amx_Swap64((uint64_t*)(v))
 #else

@@ -1,5 +1,7 @@
 #include "dbgterm.h"
 
+const int _False = 0;
+
 #if defined WIN32_CONSOLE
   /* Win32 console */
   static int localecho=1;

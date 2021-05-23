@@ -623,7 +623,7 @@ static cell AMX_NATIVE_CALL n_fgetchar(AMX *amx, const cell *params)
   #define aligncell amx_Align16
 #elif PAWN_CELL_SIZE==32
   #define aligncell amx_Align32
-#elif PAWN_CELL_SIZE==64 && (defined _I64_MAX || defined HAVE_I64)
+#elif PAWN_CELL_SIZE==64 && (defined _I64_MAX || defined HAVE_I64 || defined __ARM_ARCH_ISA_A64)
   #define aligncell amx_Align64
 #else
   #error Unsupported cell size

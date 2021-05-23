@@ -44,7 +44,7 @@
 #elif defined USE_CURSES || defined HAVE_CURSES_H
   /* Use the "curses" library to implement the console */
   #include <curses.h>
-  const int _False = 0;     /* to avoid compiler warnings */
+  extern const int _False;     /* to avoid compiler warnings */
   #define amx_printf        printw
   #define amx_putchar(c)    addch(c)
   #define amx_fflush()      (0)

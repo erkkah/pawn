@@ -143,7 +143,7 @@
   #define AMX_TOKENTHREADING    /* packed opcodes require token threading */
 #endif
 
-#if defined _I64_MAX || defined __x86_64__ || defined HAVE_I64
+#if defined _I64_MAX || defined __x86_64__ || defined HAVE_I64 || defined __ARM_ARCH_ISA_A64
   #define NATIVEADDR(addr,high)  (AMX_NATIVE)((intptr_t)(addr) | ((intptr_t)((uint64_t)high<<32)))
 #else
   #define NATIVEADDR(addr,high)  (AMX_NATIVE)(intptr_t)(addr)
@@ -445,7 +445,7 @@ typedef enum {
   }
 #endif
 
-#if (BYTE_ORDER==BIG_ENDIAN || PAWN_CELL_SIZE==64) && (defined _I64_MAX || defined __x86_64__ || defined HAVE_I64)
+#if (BYTE_ORDER==BIG_ENDIAN || PAWN_CELL_SIZE==64) && (defined _I64_MAX || defined __x86_64__ || defined HAVE_I64 || defined __ARM_ARCH_ISA_A64)
   void amx_Swap64(uint64_t *v)
   {
     unsigned char *s = (unsigned char *)v;
@@ -492,7 +492,7 @@ uint32_t * AMXAPI amx_Align32(uint32_t *v)
   return v;
 }
 
-#if defined _I64_MAX || defined __x86_64__ || defined HAVE_I64
+#if defined _I64_MAX || defined __x86_64__ || defined HAVE_I64 || defined __ARM_ARCH_ISA_A64
 uint64_t * AMXAPI amx_Align64(uint64_t *v)
 {
   assert(sizeof(*v)==8);
@@ -502,7 +502,7 @@ uint64_t * AMXAPI amx_Align64(uint64_t *v)
   #endif
   return v;
 }
-#endif  /* _I64_MAX || __x86_64__ || HAVE_I64 */
+#endif  /* _I64_MAX || __x86_64__ || HAVE_I64 || __ARM_ARCH_ISA_A64 */
 #endif  /* AMX_ALIGN || AMX_INIT */
 
 #if defined AMX_FLAGS
@@ -1930,7 +1930,7 @@ int AMXAPI amx_Register(AMX *amx, const AMX_NATIVE_INFO *list, int number)
       funcptr=(list!=NULL) ? findfunction(GETENTRYNAME(hdr,func),list,number) : NULL;
       if (funcptr!=NULL) {
         func->address=(uint32_t)(intptr_t)funcptr;
-        #if defined _I64_MAX || defined __x86_64__ || defined HAVE_I64
+        #if defined _I64_MAX || defined __x86_64__ || defined HAVE_I64 || defined __ARM_ARCH_ISA_A64
           /* for 64-bit version the high part of the pointer must be stored too */
           func->nameofs=(uint32_t)((intptr_t)funcptr >> 32);
         #endif
