@@ -553,7 +553,7 @@ int pc_compile(int argc, char *argv[])
       error(104,get_sourcefile(1));
       tmpname=NULL;
       sname=NULL;
-    #elif defined(__LINUX__)
+    #elif defined(__LINUX__) || defined (__APPLE__)
       tmpname="pawnXXXXX";
       mkstemps(tmpname, 5);
     #else
@@ -1687,7 +1687,7 @@ static void setconstants(void)
   add_constant("cellmin",(cell)((ucell)-1<<(8*pc_cellsize-1)),sGLOBAL,0);
   add_constant("charbits",sCHARBITS,sGLOBAL,0);
   add_constant("charmin",0,sGLOBAL,0);
-  add_constant("charmax",~(~0 << sCHARBITS),sGLOBAL,0);
+  add_constant("charmax",~(((unsigned int)~0) << sCHARBITS),sGLOBAL,0);
   add_constant("ucharmax",((cell)1 << (pc_cellsize-1)*8)-1,sGLOBAL,0);
 
   add_constant("__Pawn",VERSION_INT,sGLOBAL,0);

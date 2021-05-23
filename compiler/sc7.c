@@ -513,7 +513,7 @@ static int matchsequence(char *start,char *end,const char *pattern,
         /* sign-extend the value to check whether the value is in the range for
            packed parameters */
         ucell v2=v;
-        if ((v2 & ((ucell)1<<pc_cellsize*8-1))!=0)
+        if ((v2 & ((ucell)1<<(pc_cellsize*8-1)))!=0)
           v2|=~(ucell)0<<pc_cellsize*8;
         if (*ptr>' ' || v2>=((ucell)1<<((pc_cellsize*4)-1)) && v2<=~((ucell)1<<((pc_cellsize*4)-1)))
           return FALSE;
