@@ -448,9 +448,9 @@ enum {
       int result##_length_;                                                 \
       amx_StrLen(amx_Address(amx,param),&result##_length_);                 \
       if (result##_length_>0 &&                                             \
-          ((result)=(type)alloca((result##_length_+1)*sizeof(*(result))))!=NULL) \
+          ((result)=(type)alloca((size_t)(result##_length_+1)*sizeof(*(result))))!=NULL) \
         amx_GetString((char*)(result),amx_Address(amx,param),               \
-                      sizeof(*(result))>1,result##_length_+1);              \
+                      sizeof(*(result))>1,(size_t)(result##_length_+1));              \
       else (result) = NULL;                                                 \
     } while (0)
   #define amx_StrParam(amx,param,result) \

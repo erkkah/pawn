@@ -25,7 +25,7 @@
 #include <string.h>
 #include <time.h>
 #include "osdefs.h"     /* for _MAX_PATH and other macros */
-#if defined(__LINUX__)
+#if defined(__LINUX__) || defined(__APPLE__)
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/socket.h>
@@ -355,6 +355,7 @@ int remote_read_tcp(AMX *amx,cell vaddr,int number)
       return 0;
     }
   } /* while */
+  return 1;
 }
 
 int remote_write_tcp(AMX *amx,cell vaddr,int number)
@@ -390,6 +391,7 @@ int remote_write_tcp(AMX *amx,cell vaddr,int number)
       return 0;
     }
   } /* while */
+  return 1;
 }
 
 int remote_transfer_tcp(const char *filename)
